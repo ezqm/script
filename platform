@@ -1,0 +1,178 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local RunService = game:GetService("RunService")
+local playerGui = player:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
+
+-- FONTE PERSONALIZADA
+local customFont = Font.new("rbxassetid://12187371840")
+
+-- CORES
+local greenColor = Color3.fromRGB(0, 170, 0)
+local redColor = Color3.fromRGB(170, 0, 0)
+local blackColor = Color3.fromRGB(0, 0, 0)
+
+-- GUI BASE
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SkeezUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-------------------------------------------------
+-- FRAME PRINCIPAL
+-------------------------------------------------
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0.27, 0, 0.27, 0)
+mainFrame.Position = UDim2.new(0.7, 0, 0.55, 0)
+mainFrame.BackgroundColor3 = blackColor
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 18)
+frameCorner.Parent = mainFrame
+
+-- TÍTULO
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.22, 0)
+title.Position = UDim2.new(0, 0, 0.1, 0)
+title.BackgroundTransparency = 1
+title.Text = "SKEEZ SCRIPT"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextScaled = true
+title.FontFace = customFont
+title.Parent = mainFrame
+
+-- BOTÃO PLATFORM
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.9, 0, 0.42, 0)
+button.Position = UDim2.new(0.05, 0, 0.48, 0)
+button.BackgroundColor3 = greenColor
+button.BorderSizePixel = 0
+button.Text = "PLATFORM ON"
+button.TextColor3 = Color3.fromRGB(255,255,255)
+button.TextSize = 22
+button.FontFace = customFont
+button.Parent = mainFrame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 14)
+buttonCorner.Parent = button
+
+-------------------------------------------------
+-- DRAG DO FRAME (MOBILE + PC)
+-------------------------------------------------
+
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch 
+	or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch 
+	or input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
+-------------------------------------------------
+-- SISTEMA DA PLATAFORMA
+-------------------------------------------------
+
+local platformActive = false
+local platform
+local initialY
+
+local speed = 8
+local heightLimit = 18
+
+local function createPlatform()
+	if platformActive then return end
+	platformActive = true
+	
+	platform = Instance.new("Part")
+	platform.Size = Vector3.new(10, 1, 10)
+	platform.Anchored = true
+	platform.CanCollide = true
+	platform.Color = Color3.fromRGB(0,170,0)
+	
+	initialY = humanoidRootPart.Position.Y - 3
+	
+	platform.Position = Vector3.new(
+		humanoidRootPart.Position.X,
+		initialY,
+		humanoidRootPart.Position.Z
+	)
+	
+	platform.Parent = workspace
+end
+
+local function removePlatform()
+	if platform then
+		platform:Destroy()
+	end
+	platformActive = false
+end
+
+button.MouseButton1Click:Connect(function()
+	if not platformActive then
+		createPlatform()
+		button.BackgroundColor3 = redColor
+		button.Text = "PLATFORM OFF"
+	else
+		removePlatform()
+		button.BackgroundColor3 = greenColor
+		button.Text = "PLATFORM ON"
+	end
+end)
+
+RunService.RenderStepped:Connect(function(deltaTime)
+	if platformActive and platform then
+		
+		if platform.Position.Y < initialY + heightLimit then
+			platform.Position += Vector3.new(0, speed * deltaTime, 0)
+		end
+		
+		local currentY = platform.Position.Y
+		
+		platform.Position = Vector3.new(
+			humanoidRootPart.Position.X,
+			currentY,
+			humanoidRootPart.Position.Z
+		)
+	end
+end)
